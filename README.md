@@ -40,6 +40,7 @@ Anchor periodically checks the modification time of backup files and directories
 | `BACKUP_TARGETS` | *(required)* | Comma-separated targets: `label:path:max_age` |
 | `NTFY_URL` | `http://localhost:80` | ntfy server URL |
 | `NTFY_TOPIC` | `backups` | ntfy topic for alerts |
+| `NTFY_MAX_PRIORITY` | *(none)* | Ceiling for alert priority (`min`, `low`, `default`, `high`, `urgent`). Set to `default` to keep high/urgent free for messages a human must see |
 | `CHECK_INTERVAL` | `3600` | Seconds between checks |
 | `ALERT_COOLDOWN` | `86400` | Seconds before re-alerting for same issue |
 | `HEALTH_PORT` | `8586` | HTTP port for health/API endpoint |

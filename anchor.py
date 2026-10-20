@@ -19,6 +19,27 @@ CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "3600"))
 ALERT_COOLDOWN = int(os.environ.get("ALERT_COOLDOWN", "86400"))
 HEALTH_PORT = int(os.environ.get("HEALTH_PORT", "8586"))
 
+# ntfy priority ceiling. Set NTFY_MAX_PRIORITY (e.g. "default") to stop this
+# tool from ever sending high/urgent, so those levels stay reserved for
+# messages a human must see. Empty means no cap.
+_PRIORITY_LEVELS = {"min": 1, "low": 2, "default": 3, "high": 4, "urgent": 5, "max": 5,
+                    "1": 1, "2": 2, "3": 3, "4": 4, "5": 5}
+NTFY_MAX_PRIORITY = os.environ.get("NTFY_MAX_PRIORITY", "").strip().lower()
+if NTFY_MAX_PRIORITY and NTFY_MAX_PRIORITY not in _PRIORITY_LEVELS:
+    raise SystemExit(f"Invalid NTFY_MAX_PRIORITY: {NTFY_MAX_PRIORITY!r}")
+
+
+def cap_priority(priority, cap=None):
+    """Lower priority to the configured ceiling; leave it alone if under it."""
+    cap = NTFY_MAX_PRIORITY if cap is None else cap
+    if not cap:
+        return priority
+    level = _PRIORITY_LEVELS.get(str(priority).strip().lower())
+    if level is None or level <= _PRIORITY_LEVELS[cap]:
+        return priority
+    return cap
+
+
 running = True
 
 
@@ -133,7 +154,7 @@ def send_alert(result, ntfy_url, ntfy_topic):
         data=body.encode(),
         headers={
             "Title": title,
-            "Priority": priority,
+            "Priority": cap_priority(priority),
             "Tags": "warning",
         },
     )
