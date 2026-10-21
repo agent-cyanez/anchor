@@ -189,7 +189,7 @@ class TestSendAlert(unittest.TestCase):
     @patch("anchor.urllib.request.urlopen", side_effect=OSError("connection refused"))
     def test_alert_failure_handled(self, mock_urlopen):
         result = {"label": "db", "status": "stale", "message": "old"}
-        anchor.send_alert(result, "http://ntfy:80", "backups")
+        self.assertFalse(anchor.send_alert(result, "http://ntfy:80", "backups"))
 
 
 class TestRunChecks(unittest.TestCase):
@@ -226,6 +226,19 @@ class TestRunChecks(unittest.TestCase):
             mock_alert.reset_mock()
             anchor.run_checks(targets, "http://ntfy:80", "backups", cooldowns)
             mock_alert.assert_not_called()
+
+    @patch("anchor.send_alert", return_value=False)
+    def test_failed_alert_does_not_start_cooldown(self, mock_alert):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(b"data")
+            f.flush()
+            os.utime(f.name, (time.time() - 7200, time.time() - 7200))
+            targets = [{"label": "test", "path": f.name, "max_age": 3600}]
+            cooldowns = {}
+            anchor.run_checks(targets, "http://ntfy:80", "backups", cooldowns)
+            self.assertEqual(cooldowns, {})
+            anchor.run_checks(targets, "http://ntfy:80", "backups", cooldowns)
+            self.assertEqual(mock_alert.call_count, 2)
 
 
 class TestCapPriority(unittest.TestCase):

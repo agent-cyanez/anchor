@@ -161,8 +161,10 @@ def send_alert(result, ntfy_url, ntfy_topic):
     try:
         urllib.request.urlopen(req, timeout=10)
         print(f"[anchor] alert sent: {title}")
+        return True
     except (urllib.error.URLError, OSError) as e:
         print(f"[anchor] alert failed: {e}", file=sys.stderr)
+        return False
 
 
 def alert_key(result):
@@ -181,8 +183,10 @@ def run_checks(targets, ntfy_url, ntfy_topic, cooldowns):
             key = alert_key(result)
             last_alert = cooldowns.get(key, 0)
             if now - last_alert >= ALERT_COOLDOWN:
-                send_alert(result, ntfy_url, ntfy_topic)
-                cooldowns[key] = now
+                # Only start the cooldown once the alert is delivered, so a
+                # failed send (e.g. ntfy not up yet after boot) retries next check.
+                if send_alert(result, ntfy_url, ntfy_topic):
+                    cooldowns[key] = now
     return results
 
 
